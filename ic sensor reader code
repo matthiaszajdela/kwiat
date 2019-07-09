@@ -8,6 +8,45 @@ os.system('modprobe w1-therm')
 base_dir = '/sys/bus/w1/devices/'
 device_folder = glob.glob(base_dir + '28*')
 device_file = device_folder + '/w_slave'
+"""converting from hex2decadecimal back to float"""
+def hex2dec(n):
+    return float(n, 16)
+"""coefficient getters"""
+def get_ADC_():
+    return hex2dec(0x00)
+def get_k_4():
+    return hex2dec(0xA2)
+
+def get_k_3():
+    return hex2dec(0xA4)
+
+def get_k_2():
+    return hex2dec(0xA6)
+
+def get_k_1():
+    return hex2dec(0xA8)
+
+def get_k_0():
+    return hex2dec(0xAA)
+"""reset command"""
+def reset():
+    return hex2dec(0x1E)
+
+"""Start ADC Temperature Conversion"""
+def temp_conversion():
+    return hex2dec(0x48)
+
+"""PROM Read Address 0"""
+def get_address_0():
+    return hex2dec(0xA0)
+
+"""PROM Read address 6(SN_23...8)"""
+def get_address_6():
+    return hex2dec(0xAC)
+
+"""PROM Read Address 7 (SN_7...0 and Checksum) """
+def get_address_7():
+    return hex2dec(0xAE)
 
 def read_temp_raw():
     f = open(device_file, 'r')
@@ -17,28 +56,18 @@ def read_temp_raw():
 
 def read_temp():
 
-    """tbd, will be helpful to see what the ic sensor is outputting at the time"""
-    temp_c = 0
-    lines = read_temp_raw()
+    """tbd, will be helpful to see what the ic sensor is outputting at the time,
+    math: (-2) * k4 * 10-21 * ADC164
+    +   4 * k3 * 10-16 * ADC163
+    + (-2)     * k2 * 10-11 * ADC162 +
+    1 * k1 * 10-6  * ADC16  + (-1.5)  * k0 * 10-2 """
+    """coefficients"""
+    k_0 = get_k_0()
+    k_1 = get_k_1()
+    k_2 = get_k_2()
+    k_3 = get_k_3()
+    k_4 = get_k_4()
+    ADC_coeff_24 = get_ADC_()
+    ADC_coeff_16 = ADC_coeff_24 / 256
+    temp_c = (-2) * k_4 * (10 ** (-21)) * (ADC_coeff_16 ** 4) + 4 * k_3 * (10 ** (-16)) * (ADC_coeff_16 ** 3) + (-2) * k_2 * (10 ** (-11)) * (ADC_coeff_16 ** 2) + 1 * k_1 * (10 ** (-6)) * ADC_coeff_16 + (-1.5) * k_0 * (10 ** (-2))
     return temp_c
-
-
-
-
-
-
-
-
-
-
-"""
-Example of what might be used for an average temperature sensor:
-
-while lines[0].strip()[-3:] != 'YES':
-    time.sleep(0.2)
-    lines = read_temp_raw()
-equals_pos = lines[1].find('t=')
-if equals_pos != -1:
-    temp_string = lines[1][equals_pos+2:]
-    temp_c = float(temp_string) / 1000.0
-"""
