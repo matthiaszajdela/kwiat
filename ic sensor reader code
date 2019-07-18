@@ -1,9 +1,12 @@
 import time
 import smbus
+import datetime
 PS = 1
 CSB = 0
 i2c_ch = 1
+
 i2c_address = 0x77
+
 reg_reset = 0x1E
 reg_ADC_start = 0x48
 reg_ADC = 0x00
@@ -74,7 +77,28 @@ def readTemp():
     temp_c = temp_c + -2 * k_2_final * (10**(-11)) * (ADC_final**2)
     temp_c = temp_c + 1 * k_1_final * (10**(-6)) * (ADC_final)
     temp_c = temp_c + -1.5 * k_0_final * (10**(-2))
-    return [k_0_final, k_1_final, k_2_final, k_3_final, k_4_final, ADC_final, temp_c]
+    return temp_c
+def current_time():
+    currentDT = datetime.datetime.now()
+    print(currentDT.hour, end="")
+    print(":", end="")
+    print(currentDT.minute, end="")
+    print(":", end="")
+    print(currentDT.second, end="")
 while True:
+    currentDT = datetime.datetime.now()
+    current_time()
+    print(", ", end="temperature:")
     print(readTemp())
-    time.sleep(1)
+    fb = open("/home/pi/rpi-series/Data outputs/TestOutput",'a+')
+    fb.write("Time: ")
+    fb.write(str(currentDT.hour))
+    fb.write(":")
+    fb.write(str(currentDT.minute))
+    fb.write(":")
+    fb.write(str(currentDT.second))
+    fb.write(", Temperature:")
+    fb.write(str(readTemp()))
+    fb.write('\n')
+    fb.close()
+    time.sleep(0.7)
