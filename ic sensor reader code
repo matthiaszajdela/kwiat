@@ -1,73 +1,80 @@
-import os
-import glob
 import time
-
-os.system('modprove w1-gpio')
-os.system('modprobe w1-therm')
-
-base_dir = '/sys/bus/w1/devices/'
-device_folder = glob.glob(base_dir + '28*')
-device_file = device_folder + '/w_slave'
-"""converting from hex2decadecimal back to float"""
-def hex2dec(n):
-    return float(n, 16)
-"""coefficient getters"""
-def get_ADC_():
-    return hex2dec(0x00)
-def get_k_4():
-    return hex2dec(0xA2)
-
-def get_k_3():
-    return hex2dec(0xA4)
-
-def get_k_2():
-    return hex2dec(0xA6)
-
-def get_k_1():
-    return hex2dec(0xA8)
-
-def get_k_0():
-    return hex2dec(0xAA)
-"""reset command"""
-def reset():
-    return hex2dec(0x1E)
-
-"""Start ADC Temperature Conversion"""
-def temp_conversion():
-    return hex2dec(0x48)
-
-"""PROM Read Address 0"""
-def get_address_0():
-    return hex2dec(0xA0)
-
-"""PROM Read address 6(SN_23...8)"""
-def get_address_6():
-    return hex2dec(0xAC)
-
-"""PROM Read Address 7 (SN_7...0 and Checksum) """
-def get_address_7():
-    return hex2dec(0xAE)
-
-def read_temp_raw():
-    f = open(device_file, 'r')
-    lines = f.readlines()
-    f.close()
-    return lines
-
-def read_temp():
-
-    """tbd, will be helpful to see what the ic sensor is outputting at the time,
-    math: (-2) * k4 * 10-21 * ADC164
-    +   4 * k3 * 10-16 * ADC163
-    + (-2)     * k2 * 10-11 * ADC162 +
-    1 * k1 * 10-6  * ADC16  + (-1.5)  * k0 * 10-2 """
-    """coefficients"""
-    k_0 = get_k_0()
-    k_1 = get_k_1()
-    k_2 = get_k_2()
-    k_3 = get_k_3()
-    k_4 = get_k_4()
-    ADC_coeff_24 = get_ADC_()
-    ADC_coeff_16 = ADC_coeff_24 / 256
-    temp_c = (-2) * k_4 * (10 ** (-21)) * (ADC_coeff_16 ** 4) + 4 * k_3 * (10 ** (-16)) * (ADC_coeff_16 ** 3) + (-2) * k_2 * (10 ** (-11)) * (ADC_coeff_16 ** 2) + 1 * k_1 * (10 ** (-6)) * ADC_coeff_16 + (-1.5) * k_0 * (10 ** (-2))
-    return temp_c
+import smbus
+PS = 1
+CSB = 0
+i2c_ch = 1
+i2c_address = 0x77
+reg_reset = 0x1E
+reg_ADC_start = 0x48
+reg_ADC = 0x00
+reg_read = 0xA0
+reg_k4 = 0xA2
+reg_k3 = 0xA4
+reg_k2 = 0xA6
+reg_k1 = 0xA8
+reg_k0 = 0xAA
+bus = smbus.SMBus(i2c_ch)
+bus.write_byte(i2c_address, reg_reset)
+time.sleep(.1)
+def readTemp():
+    bus.write_byte_data(i2c_address, reg_k0, 0)
+    k_0 = bus.read_i2c_block_data(i2c_address, reg_k0)
+    k_0_1 = k_0[0]
+    k_0_2 = k_0[1]
+    k_0_1_bit = bin(k_0_1)[2:].zfill(8)
+    k_0_2_bit = bin(k_0_2)[2:].zfill(8)
+    k_0_tot = k_0_1_bit + k_0_2_bit
+    k_0_final = int(k_0_tot, 2)
+    bus.write_byte_data(i2c_address, reg_k1, 0)
+    k_1 = bus.read_i2c_block_data(i2c_address, reg_k1)
+    k_1_1 = k_1[0]
+    k_1_2 = k_1[1]
+    k_1_1_bit = bin(k_1_1)[2:].zfill(8)
+    k_1_2_bit = bin(k_1_2)[2:].zfill(8)
+    k_1_tot = k_1_1_bit + k_1_2_bit
+    k_1_final = int(k_1_tot, 2)
+    bus.write_byte_data(i2c_address, reg_k2, 0)
+    k_2 = bus.read_i2c_block_data(i2c_address, reg_k2)
+    k_2_1 = k_2[0]
+    k_2_2 = k_2[1]
+    k_2_1_bit = bin(k_2_1)[2:].zfill(8)
+    k_2_2_bit = bin(k_2_2)[2:].zfill(8)
+    k_2_tot = k_2_1_bit + k_2_2_bit
+    k_2_final = int(k_2_tot, 2)
+    bus.write_byte_data(i2c_address, reg_k3, 0)
+    k_3 = bus.read_i2c_block_data(i2c_address, reg_k3)
+    k_3_1 = k_3[0]
+    k_3_2 = k_3[1]
+    k_3_1_bit = bin(k_3_1)[2:].zfill(8)
+    k_3_2_bit = bin(k_3_2)[2:].zfill(8)
+    k_3_tot = k_3_1_bit + k_3_2_bit
+    k_3_final = int(k_3_tot, 2)
+    bus.write_byte_data(i2c_address, reg_k4, 0)
+    k_4 = bus.read_i2c_block_data(i2c_address, reg_k4)
+    k_4_1 = k_4[0]
+    k_4_2 = k_4[1]
+    k_4_1_bit = bin(k_4_1)[2:].zfill(8)
+    k_4_2_bit = bin(k_4_2)[2:].zfill(8)
+    k_4_tot = k_4_1_bit + k_4_2_bit
+    k_4_final = int(k_4_tot, 2)
+    
+    bus.write_byte(i2c_address, reg_ADC_start)
+    time.sleep(.2)
+    ADC = bus.read_i2c_block_data(i2c_address, reg_ADC)
+    ADC_1 = ADC[0]
+    ADC_2 = ADC[1]
+    ADC_3 = ADC[2]
+    ADC_1_bit = bin(ADC_1)[2:].zfill(8)
+    ADC_2_bit = bin(ADC_2)[2:].zfill(8)
+    ADC_3_bit = bin(ADC_3)[2:].zfill(8)
+    ADC_tot = ADC_1_bit + ADC_2_bit + ADC_3_bit
+    ADC_final = int(ADC_tot, 2) / 256
+    temp_c = -2 * k_4_final * (10**(-21)) * (ADC_final**4)   
+    temp_c = temp_c + 4 * k_3_final *(10**(-16)) * (ADC_final**3)
+    temp_c = temp_c + -2 * k_2_final * (10**(-11)) * (ADC_final**2)
+    temp_c = temp_c + 1 * k_1_final * (10**(-6)) * (ADC_final)
+    temp_c = temp_c + -1.5 * k_0_final * (10**(-2))
+    return [k_0_final, k_1_final, k_2_final, k_3_final, k_4_final, ADC_final, temp_c]
+while True:
+    print(readTemp())
+    time.sleep(1)
